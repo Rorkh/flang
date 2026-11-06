@@ -1,0 +1,25 @@
+%skip T_WHITESPACE  \s++
+
+%token T_KW_MOV mov
+%token T_KW_COMMA ,
+
+%token T_KW_SYSCALL syscall
+
+%token T_NUMBER   \d++
+
+%pragma root Program
+Program : Instruction()* ;
+
+Instruction : MovInstr() | SyscallInstr()
+
+Immediate -> {
+    return new \Flang\Ast\Node\Literal((int) $children->value, $offset);
+} : <T_NUMBER> ;
+
+MovInstr -> {
+    return new \Flang\Ast\Node\NativeInstruction(\Flang\Flasm\Opcode::MOV, $children[0]->value, $children[1]->value);
+} : ::T_KW_MOV:: Register() ::T_KW_COMMA:: (Register() | Immediate()) @error("Second operand expected")
+
+SyscallInstr -> {
+    return new \Flang\Ast\Node\NativeInstruction(\Flang\Flasm\Opcode::SYSCALL, null, null);
+} : ::T_KW_SYSCALL::

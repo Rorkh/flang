@@ -1,0 +1,82 @@
+%skip  T_WHITESPACE  \s++
+%skip  T_COMMENT     //[^\n]*+
+
+%include grammar/types
+
+%token T_KW_INCLUDE include
+
+%token T_KW_LEFT_PARENTHESIS \(
+%token T_KW_RIGHT_PARENTHESIS \)
+
+%token T_KW_LEFT_BRACE {
+%token T_KW_RIGHT_BRACE }
+
+%token T_KW_ASM asm
+%token T_KW_FN fn
+
+%token T_BOOLEAN  (?:true|false)\b
+%token T_NAME     [a-zA-Z_][a-zA-Z0-9_]*+
+
+%token T_STRING   "[^"\r\n]*+"
+%token T_LONG_STRING \[\[[^\[\]]*+\]\]
+
+%token T_NUMBER   \d++
+%token T_EQUAL    =
+
+%pragma root Block
+Block : Expression()* ;
+
+Include -> {
+    return new \Flang\Ast\Node\IncludeNode($children[0]->value, $children[0]->offset);
+} : ::T_KW_INCLUDE:: String() ;
+
+VarDecl -> {
+    return new \Flang\Ast\Node\VariableDeclaration(
+        name: $children[1]->value,
+        value: $children[2],
+        offset: $children[1]->offset
+    );
+} : VarType() <T_NAME> ::T_EQUAL:: Value() ;
+
+AsmExpr -> {
+    return new \Flang\Ast\Node\AsmNode(
+        value: $children[0]->value,
+        offset: $children[0]->offset
+    );
+} : ::T_KW_ASM:: ::T_KW_LEFT_PARENTHESIS:: String() ::T_KW_RIGHT_PARENTHESIS:: 
+
+FunctionDef -> {
+    return new \Flang\Ast\Node\FunctionDefinition(
+        name: $children[0]->value,
+        offset: $children[0]->offset,
+        children: array_slice($children, 1)
+    );
+} : ::T_KW_FN:: <T_NAME> ::T_KW_LEFT_BRACE:: Block() ::T_KW_RIGHT_BRACE:: ;
+
+FunctionCall -> {
+    return new \Flang\Ast\Node\FunctionCall(
+        name: $children[0]->value,
+        offset: $children[0]->offset
+    );
+} : <T_NAME> ::T_KW_LEFT_PARENTHESIS:: ::T_KW_RIGHT_PARENTHESIS::
+
+Expression : Include() | FunctionDef() | VarDecl() | FunctionCall() | AsmExpr() ;
+Value : String() | Number() | Boolean() ;
+
+ShortString -> {
+    return new \Flang\Ast\Node\Literal(\substr($children->value, 1, -1), $offset);
+} : <T_STRING> ;
+
+LongString -> {
+    return new \Flang\Ast\Node\Literal(\substr($children->value, 2, -2), $offset);
+} : <T_LONG_STRING> ;
+
+String : ShortString() | LongString() ;
+
+Number -> {
+    return new \Flang\Ast\Node\Literal((int) $children->value, $offset);
+} : <T_NUMBER> ;
+
+Boolean -> {
+    return new \Flang\Ast\Node\Literal($children->value === 'true', $offset);
+} : <T_BOOLEAN>;

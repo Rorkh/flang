@@ -1,0 +1,17 @@
+{
+    "name": "zeantar/flang",
+    "autoload": {
+        "psr-4": {
+            "Flang\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Rorkh",
+            "email": "rorkh@internet.ru"
+        }
+    ],
+    "require": {
+        "phplrt/phplrt": "^4.2"
+    }
+}
